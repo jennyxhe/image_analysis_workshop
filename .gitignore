@@ -5,3 +5,7 @@ uv.lock
 
 #Editor files
 *.swp
+
+#OS and R files
+.DS_Store
+.Rhistory
