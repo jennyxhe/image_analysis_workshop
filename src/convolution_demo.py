@@ -38,9 +38,9 @@ IMAGE = np.array(
 # multiplied with.  The 4 corners are switched off ("None"), so the shape is a
 # plus sign rather than a square.  Try changing the weights and run again.
 KERNEL = [
-    [None, 1, None],
-    [1, 1, 1],
-    [None, 1, None],
+    [None, 0.2, None],
+    [0.2, 0.2, 0.2],
+    [None, 0.2, None],
 ]
 
 INPUT_COLOR = "#dbe9f6"
