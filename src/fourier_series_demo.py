@@ -176,7 +176,7 @@ def circle_to_wave():
 
 # --- 2. Adding sine waves one by one ------------------------------------------
 
-def square_wave_build(n_waves=10):
+def square_wave_build(n_waves=50):
     freqs, amps, phases = square_wave_recipe(n_waves)
     target = square_wave(TIME)
     fig = plt.figure(figsize=(12, 6.5))

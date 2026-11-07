@@ -4,10 +4,11 @@ Run it from the top folder of the workshop repository with:
 
     uv run src/fourier_convolution_demo.py
 
-The noisy nucleus image is smoothed with the 3 x 3 "Smooth" kernel (all ones,
-divided by 9) in two ways: by convolution, and by multiplying the Fourier
-images and transforming back.  The script prints how much the two results
-differ, and saves a picture in Pictures/fourier2d/convolution_theorem.png.
+The noisy nucleus image is filtered with the 3 x 3 Sharpen kernel in two ways:
+by convolution, and by multiplying the Fourier images and transforming back.
+The script prints how much the two results differ, and saves a picture in
+Pictures/fourier2d/convolution_theorem_sharpen_3x3.png.
+Change KERNEL_TYPE, SIZE and SIGMA below to try other kernels.
 """
 
 from pathlib import Path
@@ -22,9 +23,40 @@ from scipy import ndimage
 
 REPO = Path(__file__).resolve().parent.parent
 INPUT = REPO / "testImages" / "Nucleus_cropped_noise.tif"
-OUTPUT = REPO / "Pictures" / "fourier2d" / "convolution_theorem.png"
+KERNEL_TYPE = "sharpen"  # "sharpen", "gaussian" or "smooth"
+SIZE = 5     # kernel size for "gaussian" and "smooth" (Sharpen is always 3 x 3)
+SIGMA = 1.0  # width of the Gaussian, in pixels (only used for "gaussian")
 
-KERNEL = np.ones((3, 3)) / 9  # the Smooth kernel from Session 3
+
+def gaussian_kernel(size, sigma):
+    """A size x size Gaussian kernel: highest in the center, falling off
+    smoothly towards the edges, like a bell curve in 2D."""
+    # Distance of each row/column from the center, e.g. -2 -1 0 1 2 for size 5
+    x = np.arange(size) - size // 2
+    bell = np.exp(-x**2 / (2 * sigma**2))   # 1D bell curve
+    kernel = np.outer(bell, bell)            # 2D bell: rows x columns
+    return kernel / kernel.sum()             # sum = 1: brightness is kept
+
+
+if KERNEL_TYPE == "sharpen":
+    # The Sharpen kernel: the center pixel counts strongly, its neighbours are
+    # subtracted.  Divided by its sum (12 - 8 = 4) so the brightness is kept.
+    KERNEL = np.array([[-1, -1, -1],
+                       [-1, 12, -1],
+                       [-1, -1, -1]]) / 4
+    KERNEL_NAME = "3 x 3 Sharpen kernel"
+elif KERNEL_TYPE == "gaussian":
+    KERNEL = gaussian_kernel(SIZE, SIGMA)
+    KERNEL_NAME = f"{SIZE} x {SIZE} Gaussian kernel (sigma {SIGMA:g})"
+else:
+    # The Smooth kernel from Session 3: all ones, divided by the number of
+    # pixels, so the kernel takes the average of its neighbourhood.
+    KERNEL = np.ones((SIZE, SIZE)) / SIZE**2
+    KERNEL_NAME = f"{SIZE} x {SIZE} Smooth kernel"
+
+rows, cols = KERNEL.shape
+OUTPUT = (REPO / "Pictures" / "fourier2d"
+          / f"convolution_theorem_{KERNEL_TYPE}_{rows}x{cols}.png")
 
 
 def fourier(image):
@@ -49,26 +81,32 @@ kernel_image = kernel_as_image(KERNEL, image.shape)
 
 # Way 1: convolution in real space.  mode="wrap" treats the image as repeating
 # like tiles, which is what the Fourier transform does too (see the README).
-smoothed = ndimage.convolve(image, KERNEL, mode="wrap")
+filtered = ndimage.convolve(image, KERNEL, mode="wrap")
 
 # Way 2: multiply the Fourier images, pixel by pixel, and transform back.
 image_f = np.fft.fft2(image)
 kernel_f = np.fft.fft2(kernel_image)
-smoothed_via_fourier = np.real(np.fft.ifft2(image_f * kernel_f))
+filtered_via_fourier = np.real(np.fft.ifft2(image_f * kernel_f))
 
-difference = np.abs(smoothed - smoothed_via_fourier).max()
-print(f"Pixel values of the smoothed image: {smoothed.min():.0f} - {smoothed.max():.0f}")
+difference = np.abs(filtered - filtered_via_fourier).max()
+print(f"Pixel values of the filtered image: {filtered.min():.0f} - {filtered.max():.0f}")
 print(f"Largest difference between the two ways: {difference:.2g}")
 
 # --- The picture --------------------------------------------------------------
 
 image_amp = np.log1p(np.abs(fourier(image)))
-smoothed_amp = np.log1p(np.abs(fourier(smoothed)))
-kernel_amp = np.abs(fourier(kernel_image))  # between 0 and 1: no log needed
+filtered_amp = np.log1p(np.abs(fourier(filtered)))
+kernel_amp = np.abs(fourier(kernel_image))  # small numbers: no log needed
 # Same brightness scale for both images, and for both Fourier images, so that
-# you can compare them directly.
+# you can compare them directly.  (Sharpening can make pixels brighter than
+# the brightest pixel of the input; those are shown as white.)
 img_range = dict(vmin=image.min(), vmax=image.max())
-amp_range = dict(vmin=smoothed_amp.min(), vmax=image_amp.max())
+amp_range = dict(vmin=min(image_amp.min(), filtered_amp.min()),
+                 vmax=max(image_amp.max(), filtered_amp.max()))
+# A smoothing kernel only lowers frequencies (amplitudes 0 to 1); the Sharpen
+# kernel boosts high frequencies (amplitudes up to 4), so let the scale grow.
+kernel_amp_range = dict(vmin=0, vmax=max(1, kernel_amp.max()))
+print(f"Kernel Fourier amplitudes: {kernel_amp.min():.2f} - {kernel_amp.max():.2f}")
 
 # Show the kernel enlarged: a small area around the center of the kernel image.
 zoom = 5
@@ -80,12 +118,12 @@ kernel_zoom = kernel_zoom[center_row - zoom:center_row + zoom + 1,
 fig, axes = plt.subplots(2, 3, figsize=(13, 9))
 panels = [
     (axes[0, 0], image, "noisy image", img_range),
-    (axes[0, 1], kernel_zoom, "3 x 3 Smooth kernel (enlarged)", {}),
-    (axes[0, 2], smoothed, "smoothed image", img_range),
+    (axes[0, 1], kernel_zoom, KERNEL_NAME + "\n(enlarged)", {}),
+    (axes[0, 2], filtered, "filtered image", img_range),
     (axes[1, 0], image_amp, "Fourier image (amplitudes, log)", amp_range),
     (axes[1, 1], kernel_amp, "Fourier image of the kernel\n(amplitudes, not log)",
-     dict(vmin=0, vmax=1)),
-    (axes[1, 2], smoothed_amp, "Fourier image (amplitudes, log)", amp_range),
+     kernel_amp_range),
+    (axes[1, 2], filtered_amp, "Fourier image (amplitudes, log)", amp_range),
 ]
 for ax, data, title, brightness in panels:
     ax.imshow(data, cmap="gray", interpolation="nearest", **brightness)
