@@ -56,13 +56,13 @@ import tifffile
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 import torch  # noqa: E402
 
-DATA_DIR = Path("Z:/ImageAnalysisCourse/ZStack_100x_BPAE/BPAE_100x_ZStack_3Crop")
+DATA_DIR = Path("")
 IMAGE_NAME = "BPAE_100x_ZStack_3_MMStack_Pos0.ome.tif"
 CHANNEL = 0                       # Cy3 is the first channel in the stack
 PSF_FILE = Path("PSF_605nm.tif")  # made by make_airy_psf.py (for Cy3: 605 nm)
 
 # Use only the center of the image (e.g. CROP_XY = 512) to try things out quickly.
-CROP_XY = None
+CROP_XY = 512
 
 # Stop as soon as one of the half images gets worse (True), or only when both
 # do (False).  True is the safer choice and gives fewer artifacts.
