@@ -9,3 +9,12 @@ uv.lock
 #OS and R files
 .DS_Store
 .Rhistory
+
+# Image data (from the shared Box folder) and generated results
+3Channel_Raw_25Pos_1/
+3Channel_Raw_25Pos_1_results/
+3Channel_FF_Corrected_25Pos_1/
+3Channel_FF_Corrected_25Pos_1_results/
+Flatfield/
+testImages/**/*_tophat_*.ome.tif
+testImages/**/*_cellpose_*.ome.tif
