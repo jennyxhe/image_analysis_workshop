@@ -18,3 +18,4 @@ uv.lock
 Flatfield/
 testImages/**/*_tophat_*.ome.tif
 testImages/**/*_cellpose_*.ome.tif
+Tracking/

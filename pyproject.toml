@@ -19,4 +19,5 @@ dependencies = [
     "napari-bioio-reader",
     "napari-tiff",
     "tifffile>=2026.10.15",
+    "btrack>=0.7.0",
 ]
